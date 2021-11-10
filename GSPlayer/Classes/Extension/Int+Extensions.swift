@@ -21,16 +21,4 @@ extension Int64 {
     var double: Double {
         return Double(self)
     }
-
-    func parseCount() -> String {
-        if self < 1000 {
-            return String(format: "%d", self)
-        } else if self < 1000000 {
-            return String(format: "%dK", self / 1000)
-        } else if self < 1000000000 {
-            return String(format: "%dM", self / 1000000)
-        } else {
-            return String(format: "%dB", self / 1000000000)
-        }
-    }
 }
