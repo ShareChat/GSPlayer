@@ -98,6 +98,10 @@ open class VideoPlayerView: UIView {
         return isLoaded ? player?.currentDuration ?? 0 : 0
     }
     
+    public var currentTime: CMTime {
+        return player?.currentTime() ?? .zero
+    }
+    
     /// Buffered progress, value range 0-1.
     public var bufferProgress: Double {
         return isLoaded ? player?.bufferProgress ?? 0 : 0
