@@ -42,6 +42,14 @@ public extension AVPlayerItem {
         return urlString.replacingOccurrences(of: AVPlayerItem.loaderPrefix, with: "").url
     }
     
+    var hasVideoCached: Bool {
+        guard
+            let url = url,
+            let configuration = try? VideoCacheManager.cachedConfiguration(for: url)
+            else { return false }
+        return configuration.progress > 0.5
+    }
+    
 }
 
 extension AVPlayerItem {
@@ -52,7 +60,7 @@ extension AVPlayerItem {
             let configuration = try? VideoCacheManager.cachedConfiguration(for: url)
             else { return false }
         
-        return configuration.downloadedByteCount >= 1024 * 768
+        return configuration.downloadedByteCount >= 1024 * 100
     }
     
     convenience init(loader url: URL) {

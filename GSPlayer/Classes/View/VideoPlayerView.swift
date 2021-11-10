@@ -118,6 +118,11 @@ open class VideoPlayerView: UIView {
         return isLoaded ? currentDuration + totalDuration * Double(replayCount) : 0
     }
     
+    /// Returns true if the video is being played from local
+    public var isVideoPlayingLocally:Bool {
+        return player?.currentItem?.hasVideoCached ?? false
+    }
+    
     private var isLoaded = false
     private var isReplay = false
     
@@ -160,6 +165,17 @@ open class VideoPlayerView: UIView {
     }
     
     deinit {
+        // refer https://stackoverflow.com/questions/48607206/ios-11-avplayer-crash-when-kvo/50453223
+        playerBufferingObservation?.invalidate()
+        playerItemKeepUpObservation?.invalidate()
+        playerItemStatusObservation?.invalidate()
+        playerLayerReadyForDisplayObservation?.invalidate()
+        playerTimeControlStatusObservation?.invalidate()
+        playerBufferingObservation = nil
+        playerItemStatusObservation = nil
+        playerItemKeepUpObservation = nil
+        playerLayerReadyForDisplayObservation = nil
+        playerTimeControlStatusObservation = nil
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -181,7 +197,9 @@ open class VideoPlayerView: UIView {
         
         self.player?.currentItem?.cancelPendingSeeks()
         self.player?.currentItem?.asset.cancelLoading()
-        
+        if let playerURL = self.playerURL {
+            VideoLoadManager.shared.cancelDownloader(forURL: playerURL)
+        }
         let player = AVPlayer()
         player.automaticallyWaitsToMinimizeStalling = false
         
@@ -300,6 +318,8 @@ private extension VideoPlayerView {
     func observe(player: AVPlayer?) {
         
         guard let player = player else {
+            playerLayerReadyForDisplayObservation?.invalidate()
+            playerTimeControlStatusObservation?.invalidate()
             playerLayerReadyForDisplayObservation = nil
             playerTimeControlStatusObservation = nil
             return
@@ -335,6 +355,9 @@ private extension VideoPlayerView {
     func observe(playerItem: AVPlayerItem?) {
         
         guard let playerItem = playerItem else {
+            playerBufferingObservation?.invalidate()
+            playerItemStatusObservation?.invalidate()
+            playerItemKeepUpObservation?.invalidate()
             playerBufferingObservation = nil
             playerItemStatusObservation = nil
             playerItemKeepUpObservation = nil
@@ -346,7 +369,7 @@ private extension VideoPlayerView {
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
             }
             
-            if self.bufferProgress >= 0.99 || (self.currentBufferDuration - self.currentDuration) > 3 {
+            if self.bufferProgress >= 0.99 || (self.currentBufferDuration - self.currentDuration) > 5.5 {
                 VideoPreloadManager.shared.start()
             } else {
                 VideoPreloadManager.shared.pause()
@@ -375,7 +398,9 @@ private extension VideoPlayerView {
         
         playToEndTime?()
         
-        guard isAutoReplay, pausedReason == .waitingKeepUp else {
+        guard isAutoReplay,
+              pausedReason == .waitingKeepUp,
+              (notification.object as? AVPlayerItem) == player?.currentItem else {
             return
         }
         

@@ -42,4 +42,11 @@ extension String {
         return (self as NSString).appendingPathExtension(str)
     }
     
+    func slice(from: String, to: String) -> String? {   //used get a substring between two substrings. eg: substring between <b> and </b>
+        return (range(of: from)?.upperBound).flatMap { substringFrom in
+            (range(of: to, range: substringFrom..<endIndex)?.lowerBound).map { substringTo in
+                return String(self[substringFrom..<substringTo])
+            }
+        }
+    }
 }

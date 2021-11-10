@@ -18,6 +18,12 @@ public class VideoLoadManager: NSObject {
     
     private(set) var loaderMap: [URL: VideoLoader] = [:]
     
+    func cancelDownloader(forURL: URL) {
+        if let loader = loaderMap[forURL] {
+            loader.cancel()
+            loaderMap.removeValue(forKey: forURL)
+        }
+    }
 }
 
 extension VideoLoadManager: AVAssetResourceLoaderDelegate {

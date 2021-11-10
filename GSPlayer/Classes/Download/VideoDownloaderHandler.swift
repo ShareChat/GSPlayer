@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import UIKit
 
 extension Notification.Name {
     
@@ -101,11 +102,12 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard !isCancelled else { return }
         
-        let range = NSRange(location: startOffset, length: data.count)
-        cacheHandler.cache(data: data, for: range)
-        cacheHandler.save()
-        
-        startOffset += data.count
+        if  UIDevice.freeDiskSpace > 200 {
+            let range = NSRange(location: startOffset, length: data.count)
+            cacheHandler.cache(data: data, for: range)
+            cacheHandler.save()
+            startOffset += data.count
+        }
         
         delegate?.handler(self, didReceive: data, isLocal: false)
         notifyProgress(flush: false)
@@ -196,5 +198,28 @@ private extension VideoDownloaderHandler {
             userInfo: userInfo
         )
     }
+}
+
+
+extension UIDevice {
+    static var freeSpace: Int64 {
+        if #available(iOS 11.0, *) {
+            if let space = try? URL(fileURLWithPath: NSHomeDirectory() as String).resourceValues(forKeys: [URLResourceKey.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage {
+                return space
+            } else {
+                return 0
+            }
+        } else {
+            if let systemAttributes = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory() as String),
+                let freeSpace = (systemAttributes[FileAttributeKey.systemFreeSize] as? NSNumber)?.int64Value {
+                return freeSpace
+            } else {
+                return 0
+            }
+        }
+    }
     
+    static var freeDiskSpace: Int64 {
+        return UIDevice.freeSpace / (1024 * 1024)
+    }
 }
