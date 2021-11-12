@@ -102,7 +102,7 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard !isCancelled else { return }
         
-        if  UIDevice.freeDiskSpace > 200 {
+        if  UIDevice.freeDiskSpaceInMB > 200 {
             let range = NSRange(location: startOffset, length: data.count)
             cacheHandler.cache(data: data, for: range)
             cacheHandler.save()
@@ -110,7 +110,6 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
         }
         
         delegate?.handler(self, didReceive: data, isLocal: false)
-        notifyProgress(flush: false)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -118,10 +117,7 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
         
         if let error = error {
             delegate?.handler(self, didFinish: error)
-            notifyFinished(error: error)
         } else {
-            notifyProgress(flush: true)
-            notifyFinished(error: nil)
             processActions()
         }
     }
@@ -173,36 +169,11 @@ private extension VideoDownloaderHandler {
         task = session?.dataTask(with: urlRequest)
         task?.resume()
     }
-    
-    func notifyProgress(flush: Bool) {
-        let currentTime = CFAbsoluteTimeGetCurrent()
-        guard lastNotifyTime < currentTime - 0.1 || flush else { return }
-        lastNotifyTime = currentTime
-        
-        let configuration = cacheHandler.configuration
-        NotificationCenter.default.post(
-            name: .VideoDownloadProgressDidChanged,
-            object: nil,
-            userInfo: ["configuration": configuration]
-        )
-    }
-    
-    func notifyFinished(error: Error?) {
-        let configuration = cacheHandler.configuration
-        var userInfo: [AnyHashable: Any] = ["configuration": configuration]
-        if let error = error { userInfo[NSURLErrorKey] = error }
-        
-        NotificationCenter.default.post(
-            name: .VideoDownloadDidFinished,
-            object: nil,
-            userInfo: userInfo
-        )
-    }
 }
 
 
-extension UIDevice {
-    static var freeSpace: Int64 {
+private extension UIDevice {
+    static var freeSpaceInBytes: Int64 {
         if #available(iOS 11.0, *) {
             if let space = try? URL(fileURLWithPath: NSHomeDirectory() as String).resourceValues(forKeys: [URLResourceKey.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage {
                 return space
@@ -219,7 +190,7 @@ extension UIDevice {
         }
     }
     
-    static var freeDiskSpace: Int64 {
-        return UIDevice.freeSpace / (1024 * 1024)
+    static var freeDiskSpaceInMB: Int64 {
+        return UIDevice.freeSpaceInBytes / (1024 * 1024)
     }
 }
