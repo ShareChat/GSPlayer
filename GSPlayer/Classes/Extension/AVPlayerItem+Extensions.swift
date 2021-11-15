@@ -47,7 +47,7 @@ public extension AVPlayerItem {
             let url = url,
             let configuration = try? VideoCacheManager.cachedConfiguration(for: url)
             else { return false }
-        return configuration.progress > 0.5
+        return configuration.progress > 0.95
     }
     
 }
