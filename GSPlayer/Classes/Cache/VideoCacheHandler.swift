@@ -127,6 +127,7 @@ public class VideoCacheHandler {
     }
     
     func cache(data: Data, for range: NSRange) {
+        ///this has been added in moj videoplayer, so we are using these from moj
         DispatchQueue.global(qos: .default).async {
             objc_sync_enter(self.writeFileHandle)
             self.writeFileHandle.seek(toFileOffset: UInt64(range.location))
@@ -145,6 +146,7 @@ public class VideoCacheHandler {
     }
     
     func set(info: VideoInfo) {
+        ///this has been added in moj videoplayer, so we are using these from moj
         self.configuration.info = info
         DispatchQueue.global(qos: .default).async {
             objc_sync_enter(self.writeFileHandle)

@@ -42,7 +42,7 @@ public extension AVPlayerItem {
         return urlString.replacingOccurrences(of: AVPlayerItem.loaderPrefix, with: "").url
     }
     
-    var hasVideoCached: Bool {
+    var isVideoAlreadyCached: Bool {
         guard
             let url = url,
             let configuration = try? VideoCacheManager.cachedConfiguration(for: url)
