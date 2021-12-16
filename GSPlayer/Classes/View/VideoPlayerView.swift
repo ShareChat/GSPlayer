@@ -341,8 +341,7 @@ private extension VideoPlayerView {
             case .paused:
                 guard !self.isReplay else { break }
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
-                /// We have removed from here because in slow network control comes a lot here and while it is waitingtokeepup, player is getting played again, moved this to 'playerBufferingObservation'
-//                if self.pausedReason == .waitingKeepUp { player.play() }
+                if self.pausedReason == .waitingKeepUp { player.play() }
             case .waitingToPlayAtSpecifiedRate:
                 break
             case .playing:
@@ -374,14 +373,9 @@ private extension VideoPlayerView {
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
             }
 
-            //In slow network, GSPlayer does not work properly if showing frames moving but no audio, so fix this we have checked the ratio and if it is greater than 0.65 that means there is adequate buffering to play
-//            if  self.currentDuration / self.currentBufferDuration < 0.65 {
-//
-//            }
+
             // This is to check if the difference between currentBufferDuration and currentDuration is 5.5 then we have to start preloading else we will pause the preloading as it might be due to slow network
             if self.bufferProgress >= 0.99 || (self.currentBufferDuration - self.currentDuration) > 5.5 {
-                //In slow network, GSPlayer does not work properly if showing frames moving but no audio, so we are playing the video when a certain video has been buffered.
-                if self.pausedReason == .waitingKeepUp && self.state != .playing { player?.play() }
                 VideoPreloadManager.shared.start()
             } else {
                 VideoPreloadManager.shared.pause()

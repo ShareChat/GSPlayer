@@ -33,6 +33,7 @@ public class VideoDownloader {
     }
     
     public func downloadToEnd(from offset: Int) {
+        /// this has been added as an implementation from Moj Player
         if offset == 0 {
             if cacheHandler.configuration.downloadedByteCount > 50 * 1024 {
                 download(from: offset, length: cacheHandler.configuration.downloadedByteCount)
