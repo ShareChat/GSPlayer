@@ -223,7 +223,6 @@ open class VideoPlayerView: UIView {
         } else {
             state = .loading
         }
-        player.play()
         player.replaceCurrentItem(with: playerItem)
         
         observe(player: player)
