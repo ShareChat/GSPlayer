@@ -8,7 +8,7 @@
 
 import Foundation
 
-private let packageLength = 1024 * 512
+private let defaultPackageLength = 1024 * 512
 
 public class VideoCacheHandler {
     
@@ -60,7 +60,7 @@ public class VideoCacheHandler {
                     continue
                 }
             }
-
+            let packageLength = min(defaultPackageLength, range.length)
             let package = intersection.length.double / packageLength.double
             let max = intersection.location + intersection.length
 
@@ -127,11 +127,13 @@ public class VideoCacheHandler {
     }
     
     func cache(data: Data, for range: NSRange) {
-        objc_sync_enter(writeFileHandle)
-        writeFileHandle.seek(toFileOffset: UInt64(range.location))
-        writeFileHandle.write(data)
-        configuration.add(fragment: range)
-        objc_sync_exit(writeFileHandle)
+        DispatchQueue.global(qos: .default).async {
+            objc_sync_enter(self.writeFileHandle)
+            self.writeFileHandle.seek(toFileOffset: UInt64(range.location))
+            self.writeFileHandle.write(data)
+            self.configuration.add(fragment: range)
+            objc_sync_exit(self.writeFileHandle)
+        }
     }
     
     func cachedData(for range: NSRange) -> Data {
@@ -143,11 +145,13 @@ public class VideoCacheHandler {
     }
     
     func set(info: VideoInfo) {
-        objc_sync_enter(writeFileHandle)
-        configuration.info = info
-        writeFileHandle.truncateFile(atOffset: UInt64(info.contentLength))
-        writeFileHandle.synchronizeFile()
-        objc_sync_exit(writeFileHandle)
+        self.configuration.info = info
+        DispatchQueue.global(qos: .default).async {
+            objc_sync_enter(self.writeFileHandle)
+            self.writeFileHandle.truncateFile(atOffset: UInt64(info.contentLength))
+            self.writeFileHandle.synchronizeFile()
+            objc_sync_exit(self.writeFileHandle)
+        }
     }
     
     func save() {

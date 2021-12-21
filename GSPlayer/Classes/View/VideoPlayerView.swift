@@ -98,6 +98,10 @@ open class VideoPlayerView: UIView {
         return isLoaded ? player?.currentDuration ?? 0 : 0
     }
     
+    public var currentTime: CMTime {
+        return player?.currentTime() ?? .zero
+    }
+    
     /// Buffered progress, value range 0-1.
     public var bufferProgress: Double {
         return isLoaded ? player?.bufferProgress ?? 0 : 0
@@ -116,6 +120,11 @@ open class VideoPlayerView: UIView {
     /// The total watch time of this video, in seconds.
     public var watchDuration: Double {
         return isLoaded ? currentDuration + totalDuration * Double(replayCount) : 0
+    }
+    
+    /// Returns true if the video is being played from Cache
+    public var isVideoPlayingFromCache:Bool {
+        return player?.currentItem?.isVideoAlreadyCached ?? false
     }
     
     private var isLoaded = false
@@ -160,6 +169,17 @@ open class VideoPlayerView: UIView {
     }
     
     deinit {
+        // refer https://stackoverflow.com/questions/48607206/ios-11-avplayer-crash-when-kvo/50453223
+        playerBufferingObservation?.invalidate()
+        playerItemKeepUpObservation?.invalidate()
+        playerItemStatusObservation?.invalidate()
+        playerLayerReadyForDisplayObservation?.invalidate()
+        playerTimeControlStatusObservation?.invalidate()
+        playerBufferingObservation = nil
+        playerItemStatusObservation = nil
+        playerItemKeepUpObservation = nil
+        playerLayerReadyForDisplayObservation = nil
+        playerTimeControlStatusObservation = nil
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -181,7 +201,9 @@ open class VideoPlayerView: UIView {
         
         self.player?.currentItem?.cancelPendingSeeks()
         self.player?.currentItem?.asset.cancelLoading()
-        
+        if let playerURL = self.playerURL {
+            VideoLoadManager.shared.cancelDownloader(forURL: playerURL)
+        }
         let player = AVPlayer()
         player.automaticallyWaitsToMinimizeStalling = false
         
@@ -201,7 +223,6 @@ open class VideoPlayerView: UIView {
         } else {
             state = .loading
         }
-        
         player.replaceCurrentItem(with: playerItem)
         
         observe(player: player)
@@ -300,6 +321,8 @@ private extension VideoPlayerView {
     func observe(player: AVPlayer?) {
         
         guard let player = player else {
+            playerLayerReadyForDisplayObservation?.invalidate()
+            playerTimeControlStatusObservation?.invalidate()
             playerLayerReadyForDisplayObservation = nil
             playerTimeControlStatusObservation = nil
             return
@@ -335,6 +358,9 @@ private extension VideoPlayerView {
     func observe(playerItem: AVPlayerItem?) {
         
         guard let playerItem = playerItem else {
+            playerBufferingObservation?.invalidate()
+            playerItemStatusObservation?.invalidate()
+            playerItemKeepUpObservation?.invalidate()
             playerBufferingObservation = nil
             playerItemStatusObservation = nil
             playerItemKeepUpObservation = nil
@@ -345,8 +371,10 @@ private extension VideoPlayerView {
             if case .paused = self.state, self.pausedReason != .hidden {
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
             }
-            
-            if self.bufferProgress >= 0.99 || (self.currentBufferDuration - self.currentDuration) > 3 {
+
+
+            // This is to check if the difference between currentBufferDuration and currentDuration is 5.5 then we have to start preloading else we will pause the preloading as it might be due to slow network
+            if self.bufferProgress >= 0.99 || (self.currentBufferDuration - self.currentDuration) > 5.5 {
                 VideoPreloadManager.shared.start()
             } else {
                 VideoPreloadManager.shared.pause()
@@ -375,7 +403,9 @@ private extension VideoPlayerView {
         
         playToEndTime?()
         
-        guard isAutoReplay, pausedReason == .waitingKeepUp else {
+        guard isAutoReplay,
+              pausedReason == .waitingKeepUp,
+              (notification.object as? AVPlayerItem) == player?.currentItem else {
             return
         }
         

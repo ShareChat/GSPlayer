@@ -15,3 +15,10 @@ extension Int {
     }
     
 }
+
+extension Int64 {
+
+    var double: Double {
+        return Double(self)
+    }
+}

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import UIKit
 
 extension Notification.Name {
     
@@ -101,14 +102,14 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
         guard !isCancelled else { return }
         
-        let range = NSRange(location: startOffset, length: data.count)
-        cacheHandler.cache(data: data, for: range)
-        cacheHandler.save()
-        
-        startOffset += data.count
+        if  UIDevice.freeDiskSpaceInMB > 200 {
+            let range = NSRange(location: startOffset, length: data.count)
+            cacheHandler.cache(data: data, for: range)
+            cacheHandler.save()
+            startOffset += data.count
+        }
         
         delegate?.handler(self, didReceive: data, isLocal: false)
-        notifyProgress(flush: false)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -116,10 +117,7 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
         
         if let error = error {
             delegate?.handler(self, didFinish: error)
-            notifyFinished(error: error)
         } else {
-            notifyProgress(flush: true)
-            notifyFinished(error: nil)
             processActions()
         }
     }
@@ -171,30 +169,4 @@ private extension VideoDownloaderHandler {
         task = session?.dataTask(with: urlRequest)
         task?.resume()
     }
-    
-    func notifyProgress(flush: Bool) {
-        let currentTime = CFAbsoluteTimeGetCurrent()
-        guard lastNotifyTime < currentTime - 0.1 || flush else { return }
-        lastNotifyTime = currentTime
-        
-        let configuration = cacheHandler.configuration
-        NotificationCenter.default.post(
-            name: .VideoDownloadProgressDidChanged,
-            object: nil,
-            userInfo: ["configuration": configuration]
-        )
-    }
-    
-    func notifyFinished(error: Error?) {
-        let configuration = cacheHandler.configuration
-        var userInfo: [AnyHashable: Any] = ["configuration": configuration]
-        if let error = error { userInfo[NSURLErrorKey] = error }
-        
-        NotificationCenter.default.post(
-            name: .VideoDownloadDidFinished,
-            object: nil,
-            userInfo: userInfo
-        )
-    }
-    
 }

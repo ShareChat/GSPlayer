@@ -33,6 +33,12 @@ public class VideoDownloader {
     }
     
     public func downloadToEnd(from offset: Int) {
+        if offset == 0 {
+            if cacheHandler.configuration.downloadedByteCount > 50 * 1024 {
+                download(from: offset, length: cacheHandler.configuration.downloadedByteCount)
+                return
+            }
+        }
         download(from: offset, length: (info?.contentLength ?? offset) - offset)
     }
     
@@ -65,7 +71,7 @@ extension VideoDownloader: VideoDownloaderHandlerDelegate {
         
         if info == nil, let httpResponse = response as? HTTPURLResponse {
             
-            let contentLength = String(httpResponse
+            var contentLength = String(httpResponse
                 .value(forHeaderKey: "Content-Range")?
                 .split(separator: "/").last ?? "0").int ?? 0
             
@@ -75,6 +81,12 @@ extension VideoDownloader: VideoDownloaderHandlerDelegate {
             let isByteRangeAccessSupported = httpResponse
                 .value(forHeaderKey: "Accept-Ranges")?
                 .contains("bytes") ?? false
+            
+            // quick fix for missing content-range due to some unknown reason
+            if contentLength == 0 {
+                contentLength = String(httpResponse
+                                        .value(forHeaderKey: "Content-Length") ?? "0").int ?? 0
+            }
             
             cacheHandler.set(info: VideoInfo(
                 contentLength: contentLength,
