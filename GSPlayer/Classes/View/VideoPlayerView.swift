@@ -189,33 +189,36 @@ open class VideoPlayerView: UIView {
     /// Play a video of the specified url.
     ///
     /// - Parameter url: Can be a local or remote URL
-    open func play(for url: URL) {
+    open func play(for url: URL?) {
         guard playerURL != url else {
             pausedReason = .waitingKeepUp
             player?.play()
             return
         }
-        
+
         observe(player: nil)
         observe(playerItem: nil)
-        
+
         self.player?.currentItem?.cancelPendingSeeks()
         self.player?.currentItem?.asset.cancelLoading()
-        if let playerURL = self.playerURL {
-            VideoLoadManager.shared.cancelDownloader(forURL: playerURL)
-        }
+
         let player = AVPlayer()
         player.automaticallyWaitsToMinimizeStalling = false
-        
-        let playerItem = AVPlayerItem(loader: url)
-        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
-        
+
         self.player = player
         self.playerURL = url
+
+        guard let url = url else {
+            return
+        }
+
+        let playerItem = AVPlayerItem(loader: url)
+        playerItem.canUseNetworkResourcesForLiveStreamingWhilePaused = true
+
         self.pausedReason = .waitingKeepUp
         self.replayCount = 0
         self.isLoaded = false
-        
+
         if playerItem.isEnoughToPlay || url.isFileURL {
             state = .none
             isLoaded = playerItem.status == .readyToPlay
@@ -223,8 +226,9 @@ open class VideoPlayerView: UIView {
         } else {
             state = .loading
         }
+
         player.replaceCurrentItem(with: playerItem)
-        
+
         observe(player: player)
         observe(playerItem: playerItem)
     }
