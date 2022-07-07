@@ -300,6 +300,8 @@ private extension VideoPlayerView {
     func observe(player: AVPlayer?) {
         
         guard let player = player else {
+            playerLayerReadyForDisplayObservation?.invalidate()
+            playerTimeControlStatusObservation?.invalidate()
             playerLayerReadyForDisplayObservation = nil
             playerTimeControlStatusObservation = nil
             return
