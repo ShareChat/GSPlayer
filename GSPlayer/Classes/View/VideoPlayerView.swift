@@ -337,6 +337,9 @@ private extension VideoPlayerView {
     func observe(playerItem: AVPlayerItem?) {
         
         guard let playerItem = playerItem else {
+            playerBufferingObservation?.invalidate()
+            playerItemStatusObservation?.invalidate()
+            playerItemKeepUpObservation?.invalidate()
             playerBufferingObservation = nil
             playerItemStatusObservation = nil
             playerItemKeepUpObservation = nil
