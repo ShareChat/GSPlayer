@@ -160,6 +160,11 @@ open class VideoPlayerView: UIView {
     }
     
     deinit {
+        playerLayerReadyForDisplayObservation?.invalidate()
+        playerTimeControlStatusObservation?.invalidate()
+        playerBufferingObservation?.invalidate()
+        playerItemStatusObservation?.invalidate()
+        playerItemKeepUpObservation?.invalidate()
         NotificationCenter.default.removeObserver(self)
     }
 }
