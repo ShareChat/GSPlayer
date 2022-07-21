@@ -160,6 +160,11 @@ open class VideoPlayerView: UIView {
     }
     
     deinit {
+        playerLayerReadyForDisplayObservation?.invalidate()
+        playerTimeControlStatusObservation?.invalidate()
+        playerBufferingObservation?.invalidate()
+        playerItemStatusObservation?.invalidate()
+        playerItemKeepUpObservation?.invalidate()
         NotificationCenter.default.removeObserver(self)
     }
 }
@@ -300,6 +305,8 @@ private extension VideoPlayerView {
     func observe(player: AVPlayer?) {
         
         guard let player = player else {
+            playerLayerReadyForDisplayObservation?.invalidate()
+            playerTimeControlStatusObservation?.invalidate()
             playerLayerReadyForDisplayObservation = nil
             playerTimeControlStatusObservation = nil
             return
@@ -335,6 +342,9 @@ private extension VideoPlayerView {
     func observe(playerItem: AVPlayerItem?) {
         
         guard let playerItem = playerItem else {
+            playerBufferingObservation?.invalidate()
+            playerItemStatusObservation?.invalidate()
+            playerItemKeepUpObservation?.invalidate()
             playerBufferingObservation = nil
             playerItemStatusObservation = nil
             playerItemKeepUpObservation = nil
