@@ -198,7 +198,7 @@ open class VideoPlayerView: UIView {
         self.pausedReason = .waitingKeepUp
         self.replayCount = 0
         self.isLoaded = false
-        
+        self.isReplay = false
         if playerItem.isEnoughToPlay || url.isFileURL {
             state = .none
             isLoaded = playerItem.status == .readyToPlay
@@ -322,7 +322,6 @@ private extension VideoPlayerView {
         playerTimeControlStatusObservation = player.observe(\.timeControlStatus) { [unowned self] player, _ in
             switch player.timeControlStatus {
             case .paused:
-                guard !self.isReplay else { break }
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
                 if self.pausedReason == .waitingKeepUp { player.play() }
             case .waitingToPlayAtSpecifiedRate:
