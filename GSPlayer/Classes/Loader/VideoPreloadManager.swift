@@ -25,6 +25,7 @@ public class VideoPreloadManager: NSObject {
     private var downloader: VideoDownloader?
     private var isAutoStart: Bool = true
     private var waitingQueue: [URL] = []
+    private var freeDiskSpaceInMB = UIDevice.freeDiskSpaceInMB
     
     public func set(waiting: [URL]) {
         downloader = nil
@@ -38,10 +39,14 @@ public class VideoPreloadManager: NSObject {
         if isAutoStart { start() }
     }
     
+    public func updateFreeDiskSpaceInMB() {
+        freeDiskSpaceInMB = UIDevice.freeDiskSpaceInMB
+    }
+    
     /// This method will help in getting the `Bool` value representing if the device memory is full or not
     /// - returns: `Bool` value representing if the device memory is full or not
     public func isSpaceNotAvailable() -> Bool {
-        UIDevice.freeDiskSpaceInMB <= maxCacheSizeAllowed
+        freeDiskSpaceInMB <= maxCacheSizeAllowed
     }
     
     func start() {
