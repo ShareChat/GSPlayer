@@ -25,7 +25,7 @@ private let delegateQueue: OperationQueue = {
     return queue
 }()
 
-protocol VideoDownloaderHandlerDelegate: class {
+protocol VideoDownloaderHandlerDelegate: AnyObject {
     
     func handler(_ handler: VideoDownloaderHandler, didReceive response: URLResponse)
     func handler(_ handler: VideoDownloaderHandler, didReceive data: Data, isLocal: Bool)
@@ -102,13 +102,16 @@ extension VideoDownloaderHandler: VideoDownloaderSessionDelegateHandlerDelegate 
         guard !isCancelled else { return }
         
         let range = NSRange(location: startOffset, length: data.count)
-        cacheHandler.cache(data: data, for: range)
-        cacheHandler.save()
+        if cacheHandler.cache(data: data, for: range)
+        {
+            cacheHandler.save()
+            
+            startOffset += data.count
+            
+            delegate?.handler(self, didReceive: data, isLocal: false)
+            notifyProgress(flush: false)
+        }
         
-        startOffset += data.count
-        
-        delegate?.handler(self, didReceive: data, isLocal: false)
-        notifyProgress(flush: false)
     }
     
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {

@@ -81,7 +81,10 @@ open class VideoPlayerView: UIView {
         get { return player?.isMuted ?? false }
         set { player?.isMuted = newValue }
     }
-    
+
+    /// Video speed rate
+    open var speedRate: Float = 1.0
+
     /// Video volume, only for this instance.
     open var volume: Double {
         get { return player?.volume.double ?? 0 }
@@ -177,7 +180,7 @@ open class VideoPlayerView: UIView {
     open func play(for url: URL) {
         guard playerURL != url else {
             pausedReason = .waitingKeepUp
-            player?.play()
+            player?.playImmediately(atRate: speedRate)
             return
         }
         
@@ -197,12 +200,13 @@ open class VideoPlayerView: UIView {
         self.playerURL = url
         self.pausedReason = .waitingKeepUp
         self.replayCount = 0
+        self.isReplay = false
         self.isLoaded = false
         self.isReplay = false
         if playerItem.isEnoughToPlay || url.isFileURL {
             state = .none
             isLoaded = playerItem.status == .readyToPlay
-            player.play()
+            player.playImmediately(atRate: speedRate)
         } else {
             state = .loading
         }
@@ -225,7 +229,7 @@ open class VideoPlayerView: UIView {
     /// Continue playing video.
     open func resume() {
         pausedReason = .waitingKeepUp
-        player?.play()
+        player?.playImmediately(atRate: speedRate)
     }
     
     /// Pause video.
@@ -258,6 +262,27 @@ open class VideoPlayerView: UIView {
     /// Cancels a previously registered periodic or boundary time observer.
     open func removeTimeObserver(_ observer: Any) {
         player?.removeTimeObserver(observer)
+    }
+
+    public func destroy() {
+        player = nil
+        NotificationCenter.default.removeObserver(self)
+        removeFromSuperview()
+    }
+
+    open func playAudioTrack(index: Int) {
+        guard
+            let asset = player?.currentItem?.asset,
+            let group = asset.mediaSelectionGroup(
+                forMediaCharacteristic: AVMediaCharacteristic.audible
+            ),
+            group.options.count > index
+        else {
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            self?.player?.currentItem?.select(group.options[index], in: group)
+        }
     }
 }
 
@@ -323,7 +348,7 @@ private extension VideoPlayerView {
             switch player.timeControlStatus {
             case .paused:
                 self.state = .paused(playProgress: self.playProgress, bufferProgress: self.bufferProgress)
-                if self.pausedReason == .waitingKeepUp { player.play() }
+                if self.pausedReason == .waitingKeepUp { player.playImmediately(atRate: speedRate) }
             case .waitingToPlayAtSpecifiedRate:
                 break
             case .playing:
@@ -371,7 +396,7 @@ private extension VideoPlayerView {
         playerItemKeepUpObservation = playerItem.observe(\.isPlaybackLikelyToKeepUp) { [unowned self] item, _ in
             if item.isPlaybackLikelyToKeepUp {
                 if self.player?.rate == 0, self.pausedReason == .waitingKeepUp {
-                    self.player?.play()
+                    self.player?.playImmediately(atRate: speedRate)
                 }
             }
         }
@@ -394,7 +419,7 @@ private extension VideoPlayerView {
         replayCount += 1
         
         player?.seek(to: CMTime.zero)
-        player?.play()
+        player?.playImmediately(atRate: speedRate)
     }
     
 }
