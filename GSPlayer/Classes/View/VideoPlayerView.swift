@@ -117,7 +117,9 @@ open class VideoPlayerView: UIView {
     private var playerLayerReadyForDisplayObservation: NSKeyValueObservation?
     private var playerTimeControlStatusObservation: NSKeyValueObservation?
     private var timeObserverToken: Any?
-
+    
+    private weak var timeObserverPlayer: AVPlayer?
+    
     open override var contentMode: UIView.ContentMode {
         didSet {
             switch contentMode {
@@ -175,6 +177,7 @@ open class VideoPlayerView: UIView {
         observe(player: nil)
         observe(playerItem: nil)
         removePeriodicObserver()
+        self.player = nil
 
         player?.currentItem?.cancelPendingSeeks()
         player?.currentItem?.asset.cancelLoading()
@@ -424,17 +427,21 @@ private extension VideoPlayerView {
     func startPeriodicProgressObserver() {
         guard let player = player else { return }
         let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval,
                                                            queue: .main) { [weak self] time in
             self?.updateTimeValues()
         }
+
+        timeObserverPlayer = player
     }
 
     func removePeriodicObserver() {
-        if let token = timeObserverToken, let player = player {
-            player.removeTimeObserver(token)
-            timeObserverToken = nil
+        if let token = timeObserverToken, let owner = timeObserverPlayer {
+            owner.removeTimeObserver(token)
         }
+        timeObserverToken = nil
+        timeObserverPlayer = nil
     }
 
     func updateTimeValues() {
